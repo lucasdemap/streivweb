@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Page</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        @font-face {
+            font-family: 'Aviano';
+            src: url('assets/aviano.ttf') format('truetype'); /* Adjust the path and format as necessary */
+        }
+
+        body {
+            margin: 0; /* Remove default margin */
+            padding: 0; /* Remove default padding */
+            background-image: url('assets/background.jpg');
+            background-size: cover; /* Cover the entire viewport */
+            background-position: center; /* Center the background image */
+            background-repeat: no-repeat; /* Do not repeat the background image */
+            font-family: 'Aviano', sans-serif; /* Set font family */
+            color: #ffffff; /* Set text color */
+            display: flex;
+            flex-direction: column; /* Adjusted to column layout */
+            align-items: center;
+            min-height: 100vh;
+            position: relative; /* Set body to relative position */
+        }
+
+        /* Positioning for STREIV */
+        #streiv {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1; /* Ensure STREIV and buttons are above other elements */
+        }
+
+        #videoContainer {
+            width: 100%;
+            max-width: 800px; /* Adjusted to fit within the container */
+            margin-top: 50px;
+        }
+
+        #videoPlayer {
+            width: 100%;
+            height: auto; /* Ensures video maintains aspect ratio */
+        }
+    </style>
+</head>
+<body>
+
+    <h1 id="streiv">STREIV</h1>
+
+    <div id="videoContainer">
+        <video id="videoPlayer" controls autoplay>
+            <source src="" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <script src="ffmpeg-core.js"></script>
+
+    <script>
+        // Function to get video URL from query parameter
+        function getVideoURL() {
+            var queryString = window.location.search;
+            var urlParams = new URLSearchParams(queryString);
+            return urlParams.get('videoURL');
+        }
+
+        // Set video source
+        var videoURL = getVideoURL();
+        var videoPlayer = document.getElementById('videoPlayer');
+        videoPlayer.src = videoURL;
+    </script>
+</body>
+</html>
