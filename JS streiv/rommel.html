@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streiv web app - Pick</title>
+    <title>Web Page</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
@@ -37,25 +37,25 @@
             position: relative;
         }
 
-        #videoContainer, #mapContainer {
+        #videoContainer {
             width: 100%;
+            max-width: 1100px; /* Adjusted to fit within the container */
+            max-height: 900px; /* Adjusted to fit within the container */
             margin-top: 50px;
+            position: relative;
+            overflow: hidden; /* Ensure metrics stay within video container */
+            text-align: center; /* Center the child elements horizontally */
         }
 
         #videoPlayer {
-            width: 100%;
-            max-height: 50vh; /* Set maximum height for the video player */
+            max-width: 100%;
+            max-height: 600px; /* Set maximum height to fill the container */
+            width: auto; /* Allow width to adjust based on aspect ratio */
+            height: auto; /* Allow height to adjust based on aspect ratio */
+            display: inline-block; /* Display the video player as an inline-block element */
         }
 
-        #map {
-            height: 400px;
-            width: 100%;
-            margin-top: 20px; /* Adjust spacing */
-        }
 
-        #mapContainer {
-            margin-bottom: 50px;
-        }
         
         /* Additional styles for the timeline bar */
         .timeline {
@@ -170,45 +170,13 @@
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/x2js/1.2.0/xml2json.min.js"></script>
-
-    <script type="module">
-
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js';
-    import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-analytics.js';
-    import { getAuth } from 'https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js'
-
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyDcwhE3dDHZ_INEKtajBpAeJjF-2AZ7jnU",
-        authDomain: "streivweb.firebaseapp.com",
-        projectId: "streivweb",
-        storageBucket: "streivweb.appspot.com",
-        messagingSenderId: "325632117156",
-        appId: "1:325632117156:web:7bb39c0e549eda50279931",
-        measurementId: "G-QZ3VZR8P3P"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const auth = getAuth(app);
-
-
-    </script>
-
-    
     <script>
-    
-    
-
         var map;
         var gpxLayer;
         var marker;
         var gpxDuration; // Variable to store the length of the GPX track in seconds
         var xmlDoc; // Variable to store the parsed GPX XML document
         var coordinates = []; // Array to store the coordinates of each trackpoint
-
-        
 
         // Function to handle when a video file is selected
         document.getElementById('videoInput').addEventListener('change', function(event) {
@@ -429,3 +397,15 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+<script>
+    // Initialize
+    const ffmpeg = FFmpeg.createFFmpeg({ log: true})
+    // Load
+    ffmpeg.load()
+</script>
