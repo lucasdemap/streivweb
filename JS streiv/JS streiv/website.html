@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Page</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        @font-face {
+            font-family: 'Aviano';
+            src: url('assets/aviano.ttf') format('truetype'); /* Adjust the path and format as necessary */
+        }
+
+        body {
+            margin: 0; /* Remove default margin */
+            padding: 0; /* Remove default padding */
+            background-image: url('assets/background.jpg');
+            background-size: cover; /* Cover the entire viewport */
+            background-position: center; /* Center the background image */
+            background-repeat: no-repeat; /* Do not repeat the background image */
+            font-family: 'Aviano', sans-serif; /* Set font family */
+            color: #ffffff; /* Set text color */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: relative; /* Set body to relative position */
+        }
+        
+        #container {
+            max-width: 800px; /* Set maximum width for the container */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        #videoContainer, #mapContainer {
+            width: 100%;
+            margin-top: 50px;
+        }
+
+        #videoPlayer {
+            width: 100%;
+            max-height: 50vh; /* Set maximum height for the video player */
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 20px; /* Adjust spacing */
+        }
+
+        #mapContainer {
+            margin-bottom: 50px;
+        }
+        
+        /* Additional styles for the timeline bar */
+        .timeline {
+            width: 100%;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .timeline .bar {
+            height: 5px;
+            background-color: #FF0000; /* Change color as needed */
+            width: 0%; /* Change initial width as needed */
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Positioning for STREIV */
+        #streiv {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1; /* Ensure STREIV and buttons are above other elements */
+        }
+
+        /* Positioning for buttons */
+        #buttons {
+            position: absolute;
+            left: calc(60px + 150px); /* Adjust based on the width of STREIV */
+            top: 36px;
+            z-index: 1; /* Ensure STREIV and buttons are above other elements */
+        }
+
+        /* Style for the timeline input */
+        .timeline input[type="range"] {
+            width: 100%; /* Set the width to match the video player */
+        }
+
+        #syncButton {
+            position: absolute;
+            top: 80px; /* Adjust the top distance as needed */
+            left: 10px; /* Position horizontally at the center */
+            z-index: 1; /* Ensure the button is above other elements */
+            background-color: #007bff;; /* Green */
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+
+        }
+
+        
+
+        #syncButton:hover {
+            background-color: #0056b3; /* Darker blue color on hover */
+        }
+
+    </style>
+</head>
+<body>
+    <h1 id="streiv">STREIV</h1>
+
+    <!-- Buttons -->
+    <div id="buttons">
+        <!-- File Picker for Video -->
+        <input type="file" id="videoInput" accept="video/*" style="display: none;">
+        <button id="videoButton" onclick="document.getElementById('videoInput').click();">Pick video</button>
+
+        <!-- File Picker for GPX -->
+        <input type="file" id="gpxInput" accept=".gpx" style="display: none;">
+        <button id="gpxButton" onclick="document.getElementById('gpxInput').click();">Pick GPX file</button>
+
+        
+
+    </div>
+
+    <button id="syncButton" onclick="syncAndRedirect()">SYNC</button>
+    
+
+    <div id="container">
+        <div id="videoContainer">
+            <!-- Video Player -->
+            <video id="videoPlayer" controls>
+                Your browser does not support the video tag.
+            </video>
+            <!-- Video Timeline -->
+            <div class="timeline">
+                <input type="range" id="videoTimeline" min="0" value="0" step="1" style="width: 100%;" onchange="seekVideo(this.value)">
+            </div>
+        </div>
+
+        <!-- GPX Timeline -->
+        <div class="timeline">
+            <input type="range" id="gpxTimeline" min="0" value="0" step="1" style="width: 100%;" onchange="seekGPX(this.value)">
+            <!-- Previous and Next Buttons -->
+            <div id="gpxTimelineButtons">
+                <button onclick="moveBackward()">Previous</button>
+                <button onclick="moveForward()">Next</button>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div id="mapContainer">
+            <!-- Map Display -->
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/x2js/1.2.0/xml2json.min.js"></script>
+    <script>
+        var map;
+        var gpxLayer;
+        var marker;
+        var gpxDuration; // Variable to store the length of the GPX track in seconds
+        var xmlDoc; // Variable to store the parsed GPX XML document
+        var coordinates = []; // Array to store the coordinates of each trackpoint
+
+        // Function to handle when a video file is selected
+        document.getElementById('videoInput').addEventListener('change', function(event) {
+            // Get the selected file
+            var file = event.target.files[0];
+
+            // Check if it's a video file
+            if (file.type.startsWith('video')) {
+                // Create a URL for the selected video file
+                var videoURL = URL.createObjectURL(file);
+
+                // Display the video player
+                var videoPlayer = document.getElementById('videoPlayer');
+                videoPlayer.src = videoURL;
+
+                // Display the video container
+                document.getElementById('videoContainer').style.display = 'block';
+
+                // Set the maximum value of the timeline to the duration of the video
+                videoPlayer.onloadedmetadata = function() {
+                    document.getElementById('videoTimeline').max = videoPlayer.duration;
+                };
+            } else {
+                // Handle other file types (e.g., GPX)
+                console.log('Selected file is not a video.');
+            }
+        });
+        
+
+        // Function to handle when a GPX file is selected
+        document.getElementById('gpxInput').addEventListener('change', function(event) {
+            // Get the selected GPX file
+
+            var gpxFile = event.target.files[0];
+
+            // Do something with the selected GPX file
+            console.log('Selected GPX file:', gpxFile);
+
+            // Parse GPX file and display on map
+            parseGPX(gpxFile);
+        });
+
+        // Function to reset GPX-related variables and map
+        function resetGPX() {
+        // Reset GPX-related variables
+        
+        map.removeLayer(gpxLayer)
+
+        // Remove marker from map if it exists
+            if (marker) {
+                map.removeLayer(marker);
+                marker = null;
+            }
+
+            // Remove previous GPX layer from map if it exists
+            if (gpxLayer) {
+                map.removeLayer(gpxLayer);
+                gpxLayer = null;
+            }
+        }
+
+
+    
+
+        // Function to parse GPX file and display on map
+        function parseGPX(file) {
+            var reader = new FileReader();
+
+            reader.onload = function(event) {
+                var gpxData = event.target.result;
+                xmlDoc = new DOMParser().parseFromString(gpxData, 'text/xml');
+                displayGPXOnMap(xmlDoc);
+
+                // Set the maximum value of the gpxTimeline input to the total number of trackpoints
+                var trackPoints = xmlDoc.querySelectorAll('trkpt');
+                document.getElementById('gpxTimeline').max = trackPoints.length - 1;
+            };
+
+            reader.onerror = function(event) {
+                console.error('Error reading GPX file:', event.target.error);
+            };
+
+            reader.readAsText(file);
+        }
+
+
+        // Function to display GPX data on map
+        function displayGPXOnMap(xmlDoc) {
+            var trackPoints = xmlDoc.querySelectorAll('trkpt');
+            var latlngs = [];
+
+            trackPoints.forEach(function(point) {
+                var lat = parseFloat(point.getAttribute('lat'));
+                var lon = parseFloat(point.getAttribute('lon'));
+                latlngs.push([lat, lon]);
+            });
+
+            // Clear existing layers
+            if (map && gpxLayer) {
+                map.removeLayer(gpxLayer);
+            }
+
+            // Create new map if not exists
+            if (!map) {
+                map = L.map('map').setView(latlngs[0], 13);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+            }
+
+            // Add new polyline layer
+            gpxLayer = L.polyline(latlngs, {color: 'red'}).addTo(map);
+        }
+
+
+        // Function to seek the GPX activity to a specific time
+        function seekGPX(index) {
+            // Update marker position on the map based on the index
+
+            console.log('seekGPX', index);
+
+            updateMarkerPosition(index);
+        }
+
+        // Function to update marker position on the map based on index
+        function updateMarkerPosition(index) {
+            var trackPoints = xmlDoc.querySelectorAll('trkpt');
+            var point = trackPoints[index];
+            var lat = parseFloat(point.getAttribute('lat'));
+            var lon = parseFloat(point.getAttribute('lon'));
+
+            // Update marker position on the map
+            if (!marker) {
+                // Create marker if it doesn't exist
+                marker = L.marker([lat, lon]).addTo(map);
+            } else {
+                // Update marker position if it already exists
+                marker.setLatLng([lat, lon]);
+            }
+        }
+
+
+        // Function to move the marker and timeline forward by one trackpoint
+        function moveForward() {
+            var currentIndex = parseInt(document.getElementById('gpxTimeline').value);
+            var nextIndex =  currentIndex + 1;
+
+            console.log('currentIndex', currentIndex);
+            console.log('nextIndex', nextIndex);
+
+
+
+            document.getElementById('gpxTimeline').value = nextIndex;
+            seekGPX(nextIndex);
+        }
+
+        // Function to move the marker and timeline backward by one trackpoint
+        function moveBackward() {
+            var currentIndex = parseInt(document.getElementById('gpxTimeline').value);
+            var prevIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex;
+
+            console.log('currentIndex', currentIndex);
+            console.log('prevIndex', prevIndex);
+
+            document.getElementById('gpxTimeline').value = prevIndex;
+            seekGPX(prevIndex);
+        }
+
+        // Function to save current indices and redirect
+        function syncAndRedirect() {
+            // Get current indices
+            var videoIndex = document.getElementById('videoTimeline').value;
+            var gpxIndex = document.getElementById('gpxTimeline').value;
+
+            // Save indices to localStorage or sessionStorage
+            localStorage.setItem('videoIndex', videoIndex);
+            localStorage.setItem('gpxIndex', gpxIndex);
+
+            // Get video and GPX file URLs
+            var videoURL = document.getElementById('videoPlayer').src;
+            var gpxFile = document.getElementById('gpxInput').files[0];
+
+            // Create a FormData object to append the GPX file
+            var formData = new FormData();
+            formData.append('videoURL', videoURL);
+            formData.append('gpxFile', gpxFile);
+
+            // Encode the FormData as a query string
+            var queryString = new URLSearchParams(formData).toString();
+
+            // Redirect to a new page with query parameters
+            window.location.href = 'edit.html?' + queryString; // Change 'new_page.html' to the desired page URL
+        }
+
+
+
+
+
+
+
+
+
+        
+        // Function to seek the video to a specific time
+        function seekVideo(time) {
+            var videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.currentTime = time;
+        }
+
+        videoPlayer.addEventListener('timeupdate', function() {
+            var videoPlayer = document.getElementById('videoPlayer');
+            var videoTimeline = document.getElementById('videoTimeline');
+            videoTimeline.value = videoPlayer.currentTime;
+        });
+
+
+    </script>
+</body>
+</html>
